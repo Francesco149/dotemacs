@@ -1,0 +1,987 @@
+#+TITLE: loli's emacs config
+[[https://i.imgur.com/D71lCUz.png]]
+[[https://i.imgur.com/XBNJeyO.png]]
+
+special thanks to [[https://github.com/daedreth][Uncle Dave]] for getting me started with emacs
+
+* license
+this is free and unencumbered software released into the public
+domain. refer to the attached UNLICENSE or http://unlicense.org/
+
+* programs this config depends on
+depending on how you use emacs you might not ever need any of these, but the
+config does reference them in one way or another
+
+- [[https://st.suckless.org/][st]]
+- [[https://clang.llvm.org/][clang]]
+- [[https://git-scm.com/][git (this is actually required)]]
+- [[https://github.com/Francesco149/sharenix][sharenix]]
+- [[https://github.com/Francesco149/loli-overlay/blob/master/sys-config/loli/files/eixpaths.c][eixpaths]]
+- [[https://wiki.gentoo.org/wiki/Portage][portage]]
+- [[https://github.com/Francesco149/2xProTamsyn][my modified ProFont]]
+
+* first time setup
+run ~jedi:install-server~ and ~irony-install-server~ .
+
+what else? I dunno, this needs testing
+
+
+* garbage collection
+garbage collection is what makes emacs so incredibly slow, accounting for
+something like 60% of the performance hit when typing some C code according
+to my tests.
+
+by disabling garbage collection temporarily I can speed up minibuffer operations
+that tend to be memory heavy like fuzzy searches
+
+in every other case I set garbage collection to happen as often as possible
+to minimize perceivable performance spikes which are incredibly annoying
+
+note that you should only disable garbage collection if you trust that you
+have enough memory to handle the timeframe with no gc. I have 32gb of ram
+so I'm pretty confident it can handle the spike
+
+you should definitely try tweaking these settings on your own as every cpu
+will perform and feel differently
+
+#+BEGIN_SRC emacs-lisp
+(defun disable-gc ()
+  "Disable garbage collection"
+  (setq gc-cons-threshold most-positive-fixnum))
+
+(defun normal-gc ()
+  "Garbage collect normally"
+  (setq gc-cons-threshold 80000))
+
+(add-hook 'minibuffer-setup-hook #'disable-gc)
+(add-hook 'minibuffer-exit-hook #'normal-gc)
+
+(disable-gc)
+#+END_SRC
+
+* quelpa-use-package
+this integrates quelpa into use-package so it can fetch packages
+that are only on git or not on melpa
+
+#+BEGIN_SRC emacs-lisp
+(use-package quelpa-use-package :ensure t)
+#+END_SRC
+
+* utility functions
+#+BEGIN_SRC emacs-lisp
+(defun random-element (list)
+  "Picks a random element from LIST"
+  (nth (random (length list)) list))
+
+(defun random-file (dir)
+  "Picks a random file or directory in DIR (doesn't include . or ..)"
+  (random-element
+   (directory-files
+    (expand-file-name dir) t ".+\..+")))
+#+END_SRC
+
+* exwm
+~server-start~ starts the emacs daemon so that if an application
+tries to open emacs as the default editor it doesn't open an
+entirely new instance of emacs
+
+~exwm-line-mode-passthrough~ ensures that all emacs keybinds
+(such as my minor sharenix mode) work
+
+note how I have to explicitly map some workspaces to the other
+monitor. this is because otherwise they are automatically
+created on the monitor that's detected as primary.
+
+#+BEGIN_SRC emacs-lisp
+(defun exwm-launcher (command)
+  "Asynchronously run a shell command with no associated buffer"
+  (interactive (list (read-shell-command "$ ")))
+  (start-process command nil default-shell "-c" command))
+
+(defun local-exwm-setup ()
+  "Perform initialization setup for exwm"
+  (exwm-workspace-switch-create 1))
+
+(defvar exwm-floating-move-delta 10)
+
+(defun exwm-floating-move-right ()
+  "Move EXWM floating window right by exwm-floating-move-delta"
+  (interactive)
+  (exwm-floating-move exwm-floating-move-delta 0))
+
+(defun exwm-floating-move-left ()
+  "Move EXWM floating window left by exwm-floating-move-delta"
+  (interactive)
+  (exwm-floating-move (- exwm-floating-move-delta) 0))
+
+(defun exwm-floating-move-up ()
+  "Move EXWM floating window up by exwm-floating-move-delta"
+  (interactive)
+  (exwm-floating-move 0 (- exwm-floating-move-delta)))
+
+(defun exwm-floating-move-down ()
+  "Move EXWM floating window down by exwm-floating-move-delta"
+  (interactive)
+  (exwm-floating-move 0 exwm-floating-move-delta))
+
+(defvar exwm-resize-delta 10)
+
+(defun exwm-shrink-horizontally ()
+  "Shrink window horizontally by exwm-resize-delta"
+  (interactive)
+  (exwm-layout-shrink-window-horizontally exwm-resize-delta))
+
+(defun exwm-shrink ()
+  "Shrink window vertically by exwm-resize-delta"
+  (interactive)
+  (exwm-layout-shrink-window exwm-resize-delta))
+
+(defun exwm-enlarge-horizontally ()
+  "Enlarge window horizontally by exwm-resize-delta"
+  (interactive)
+  (exwm-layout-enlarge-window-horizontally exwm-resize-delta))
+
+(defun exwm-enlarge ()
+  "Enlarge window vertically by exwm-resize-delta"
+  (interactive)
+  (exwm-layout-enlarge-window exwm-resize-delta))
+
+(use-package exwm
+  :ensure t
+  :config
+  (require 'exwm-config)
+  (server-start)
+
+  (add-hook 'exwm-update-class-hook
+            (lambda ()
+              (exwm-workspace-rename-buffer exwm-class-name)))
+
+  (setq exwm-workspace-number 1)
+  (exwm-input-set-key (kbd "s-r") #'exwm-reset)
+  (exwm-input-set-key (kbd "s-w") #'exwm-workspace-switch)
+  (exwm-input-set-key (kbd "s-k") #'exwm-workspace-delete)
+  (exwm-input-set-key (kbd "s-&") #'exwm-launcher)
+
+  (exwm-input-set-key (kbd "s-<left>") #'exwm-floating-move-left)
+  (exwm-input-set-key (kbd "s-<right>") #'exwm-floating-move-right)
+  (exwm-input-set-key (kbd "s-<up>") #'exwm-floating-move-up)
+  (exwm-input-set-key (kbd "s-<down>") #'exwm-floating-move-down)
+
+  (exwm-input-set-key (kbd "s-<C-left>") #'exwm-shrink-horizontally)
+  (exwm-input-set-key (kbd "s-<C-right>") #'exwm-enlarge-horizontally)
+  (exwm-input-set-key (kbd "s-<C-up>") #'exwm-shrink)
+  (exwm-input-set-key (kbd "s-<C-down>") #'exwm-enlarge)
+
+  (dotimes (i 10)
+    (exwm-input-set-key (kbd (format "s-%d" i))
+                        `(lambda ()
+                           (interactive)
+                           (exwm-workspace-switch-create ,i))))
+
+  (exwm-input-set-simulation-keys
+   '(([?\C-b] . left)
+     ([?\M-b] . C-left)
+     ([?\C-f] . right)
+     ([?\M-f] . C-right)
+     ([?\C-p] . up)
+     ([?\C-n] . down)
+     ([?\C-a] . home)
+     ([?\C-e] . end)
+     ([?\M-v] . prior)
+     ([?\C-v] . next)
+     ([?\C-d] . delete)
+     ([?\C-k] . (S-end delete))
+     ([?\C-w] . ?\C-x)
+     ([?\M-w] . ?\C-c)
+     ([?\C-y] . ?\C-v)
+     ([?\C-s] . ?\C-f)))
+
+  (setq save-interprogram-paste-before-kill t)
+  (exwm-enable)
+  (exwm-config-ido)
+  (fringe-mode 1)
+
+  (require 'exwm-randr)
+  (setq exwm-randr-workspace-output-plist
+        (apply #'append (mapcar
+                         (lambda (x) `(,x "DVI-D-1"))
+                         (number-sequence 1 8))))
+  (exwm-randr-enable)
+
+  (require 'exwm-systemtray)
+  (exwm-systemtray-enable)
+
+  (add-hook 'exwm-init-hook #'local-exwm-setup))
+#+END_SRC
+
+* dashboard
+the latest org-plus-contrib appears to have broken agenda in the dashboard
+again so for now it's removed :(
+
+#+BEGIN_SRC emacs-lisp
+(defvar local-logos "~/emacs-logos/")
+
+(defun agenda-setup ()
+  "Sets up agenda files"
+  (setq org-agenda-files (quote ("~/.emacs.d/notes.org")))
+  (auto-revert-mode))
+
+(use-package dashboard
+  :ensure t
+  :config
+  (setq dashboard-items '((recents . 10)))
+  (if (file-exists-p local-logos)
+      (setq dashboard-startup-banner (random-file local-logos)))
+  (setq dashboard-banner-logo-title "YEAR OF THE LINUX DESKTOP")
+  (dashboard-setup-startup-hook)
+  (add-hook 'dashboard-mode-hook #'agenda-setup))
+#+END_SRC
+
+* portage
+#+BEGIN_SRC emacs-lisp
+(defun portage-eixpaths (pattern)
+  "Search portage metadata for PATTERN, returns a list of ebuild paths."
+  (let ((p pattern))
+    (with-temp-buffer
+      (split-string (shell-command-to-string (format "eix %s | eixpaths" p))
+                    "\n" t))))
+
+(defun portage-completing-read (pattern)
+  "Search portage metadata for PATTERN and interactively pick a matching
+ebuild path."
+  (interactive "s\Pattern or package name: ")
+  (let ((paths (portage-eixpaths pattern)))
+    (ido-completing-read "Matching ebuilds: " paths nil t)))
+
+(defun portage-find-file ()
+  "Search portage metadata for PATTERN and interactively pick a matching
+ebuild path that will be visited"
+  (interactive)
+  (let ((file (call-interactively 'portage-completing-read)))
+    (if (string= "" file)
+        (message "Quit")
+      (find-file file))))
+#+END_SRC
+
+* sharenix
+** functions
+#+BEGIN_SRC emacs-lisp
+(defun sharenix-process (&rest args)
+  "`start-process' wrapper with name=\"sharenix\" and
+buffer=\"*ShareNix Messages*\""
+  (apply #'start-process "sharenix" "*ShareNix Messages*" args))
+
+(defun sharenix-window ()
+  "Calls `sharenix-process' with sharenix-window"
+  (interactive)
+  (sharenix-process "sharenix-window"))
+
+(defun sharenix-section ()
+  "Calls `sharenix-process' with sharenix-section"
+  (interactive)
+  (sharenix-process "sharenix-section"))
+
+(defun sharenix-full ()
+  "Calls `sharenix-process' with sharenix -m=fs -n -c"
+  (interactive)
+  (sharenix-process "sharenix" "-m=fs" "-n" "-c"))
+
+(defun sharenix-clipboard ()
+  "Calls `sharenix-process' with sharenix -m=c -n -c"
+  (interactive)
+  (sharenix-process "sharenix" "-m=c" "-n" "-c"))
+
+(defun sharenix (file)
+  "Calls `sharenix-process' with sharenix -n -c"
+  (interactive)
+  (sharenix-process "sharenix" "-n" "-c" file))
+#+END_SRC
+
+** minor mode
+this is pretty much unused as it can't have priority in exwm windows.
+see my exwm keybinds in the next section
+
+#+BEGIN_SRC emacs-lisp
+(defvar sharenix-mode-map
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "C-@") #'sharenix-full)
+    (define-key m (kbd "C-#") #'sharenix-window)
+    (define-key m (kbd "C-$") #'sharenix-section)
+    (define-key m (kbd "C-%") #'sharenix-clipboard)
+    m)
+  "Keymap for ShareNix")
+
+(define-minor-mode sharenix-mode
+  "Minor for ShareNix keybinds"
+  :init-value t
+  :lighter " ShareNix"
+  :keymap 'sharenix-mode-map)
+
+(define-globalized-minor-mode global-sharenix-mode
+  sharenix-mode sharenix-mode)
+
+(add-to-list 'emulation-mode-map-alists
+             `((sharenix-mode . ,sharenix-mode-map)))
+
+(defun turn-off-sharenix-mode ()
+  "Disables ShareNix mode"
+  (sharenix-mode -1))
+
+(add-hook 'minibuffer-setup-hook #'turn-off-sharenix-mode)
+(provide 'sharenix-mode)
+#+END_SRC
+
+** exwm keybinds
+these keybinds will have priority even in a char mode exwm buffer
+
+if you don't run the latest version of exwm it might be necessary to run
+~exwm-input--update-global-prefix-keys~ because of [[https://github.com/ch11ng/exwm/issues/235][this issue]]
+
+should I move these to exwm's ~:config~ ? although I'm pretty sure exwm will
+be initialized when we get here
+
+#+BEGIN_SRC emacs-lisp
+(exwm-input-set-key (kbd "C-@") #'sharenix-full)
+(exwm-input-set-key (kbd "C-#") #'sharenix-window)
+(exwm-input-set-key (kbd "C-$") #'sharenix-section)
+(exwm-input-set-key (kbd "C-%") #'sharenix-clipboard)
+#+END_SRC
+
+* dmenu
+#+BEGIN_SRC emacs-lisp
+(use-package dmenu
+  :ensure t
+  :bind ("s-p" . 'dmenu))
+#+END_SRC
+
+* proced
+I don't actually use proced a lot yet because I'd like to be able to see
+the overall cpu usage, uptime and other info like in htop
+
+#+BEGIN_SRC emacs-lisp
+(use-package proced
+  :ensure t
+  :config
+  (add-to-list 'proced-format-alist
+               '(tiny tree pid pcpu rss (args comm))))
+
+(defun local-proced-settings ()
+  "Personal proced settings"
+  (proced-toggle-auto-update 1)
+  (setq proced-format 'tiny))
+
+(add-to-list 'same-window-buffer-names "*Proced*")
+(add-hook 'proced-mode-hook #'local-proced-settings)
+#+END_SRC
+
+* dired+
+dired+ combines some of the best dired extensions and adds more on top.
+I quite like image-dired, it seems like it could replace sxiv for my workflow
+
+#+BEGIN_SRC emacs-lisp
+(defun local-dired-settings ()
+  "Personal dired settings"
+  (dired-hide-details-mode -1))
+
+(use-package dired+
+  :ensure t
+  :quelpa
+  (dired+
+   :fetcher github
+   :repo "emacsmirror/dired-plus")
+  :config
+  (add-to-list 'dired-compress-file-suffixes
+               '("\\.zip\\'" ".zip" "unzip"))
+  (let ((s 235))
+    (setq image-dired-thumb-size s)
+    (setq image-dired-thumb-width s)
+    (setq image-dired-thumb-height s))
+  (setq image-dired-line-up-method 'dynamic)
+  (setq dired-listing-switches "-lAt")
+  (setq dired-hide-details-hide-information-lines nil)
+  (setq dired-hide-details-hide-symlink-targets nil)
+  (add-hook 'dired-mode-hook #'local-dired-settings))
+#+END_SRC
+
+* magit
+I'm quite fond of using git from the command line, but in the emacs ecosystem
+using magit is much quicker than pulling up a terminal
+
+#+BEGIN_SRC emacs-lisp
+(use-package magit
+  :ensure t
+  :bind ("M-g" . magit-status)
+  :config
+  (setq magit-display-buffer-function
+        #'magit-display-buffer-same-window-except-diff-v1))
+#+END_SRC
+
+* irc
+the hl-nicks module doesn't seem to work. help?
+
+#+BEGIN_SRC emacs-lisp
+(defun erc-prompt-formatter ()
+  "Returns the current buffer name wrapped in square brackets"
+  (concat "[" (buffer-name) "]"))
+
+(setq erc-nick "lolisamurai")
+(setq erc-prompt #'erc-prompt-formatter)
+(setq erc-hide-list '("JOIN" "PART" "QUIT"))
+(setq erc-server-history-list '("irc.freenode.net"))
+
+(use-package erc-hl-nicks
+  :ensure t
+  :config (erc-update-modules))
+
+(use-package erc-image
+  :ensure t
+  :config
+  (add-to-list 'erc-modules 'image)
+  (erc-update-modules))
+#+END_SRC
+
+* org
+** keybinds
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c a") #'org-agenda)
+#+END_SRC
+
+** when the agenda is open, autosave all org buffers
+this way i don't have to switch to agenda.org and save it when I mark
+entries as done in org-agenda
+
+#+BEGIN_SRC emacs-lisp
+(defun enable-org-auto-save ()
+  "Enables auto-saving for all org-mode buffers"
+  (add-hook 'auto-save-hook 'org-save-all-org-buffers nil t)
+  (auto-save-mode))
+
+(add-hook 'org-agenda-mode-hook #'enable-org-auto-save)
+#+END_SRC
+
+** open code blocks in the same window
+#+BEGIN_SRC emacs-lisp
+(setq org-src-window-setup 'current-window)
+#+END_SRC
+
+** don't add useless extra indentiation to code blocks
+#+BEGIN_SRC emacs-lisp
+(setq org-edit-src-content-indentation 0)
+#+END_SRC
+
+** shortcuts for frequently used code block languages
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'org-structure-template-alist
+             '("el" "#+BEGIN_SRC emacs-lisp\n?\n#+END_SRC"))
+#+END_SRC
+
+** code blocks act and highlight as the major language mode
+#+BEGIN_SRC emacs-lisp
+(setq org-src-fontify-natively t)
+(setq org-src-tab-acts-natively t)
+#+END_SRC
+
+* misc
+** disable annoying gui elements
+#+BEGIN_SRC emacs-lisp
+(tool-bar-mode -1)
+(menu-bar-mode -1)
+(scroll-bar-mode -1)
+(setq inhibit-startup-message t)
+(setq ring-bell-function 'ignore)
+(defalias 'yes-or-no-p 'y-or-n-p)
+#+END_SRC
+
+** prevent windows from splitting vertically too easily
+#+BEGIN_SRC emacs-lisp
+(setq split-width-threshold 80)
+#+END_SRC
+
+** default browser
+#+BEGIN_SRC emacs-lisp
+(defun browse-url-qutebrowser (url &rest args)
+  "Runs `start-process' \"qutebrowser\" \"*Messages*\" ignores ARGS"
+  (start-process "qutebrowser" "*Messages*"
+         "qutebrowser" url))
+
+(setq browse-url-browser-function 'browse-url-qutebrowser)
+#+END_SRC
+
+** line numbers
+linum-mode is incredibly slow so I installed this
+
+#+BEGIN_SRC emacs-lisp
+(defun nlinum-config ()
+  "Sets up nlinum mode"
+  (set-face-attribute 'linum nil :background "black"))
+
+(use-package nlinum
+  :ensure t
+  :config
+  (add-hook 'prog-mode-hook #'nlinum-mode)
+  (setq nlinum-format "%4d ")
+  (add-hook 'nlinum-mode-hook #'nlinum-config))
+#+END_SRC
+
+** fringe
+I couldn't figure out how to add padding between the fringe and the code
+so I'll make it invisible altogether because it looks terrible
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'fringe nil :background "black")
+#+END_SRC
+
+* misc packages
+** which-key: displays all possible command completions
+#+BEGIN_SRC emacs-lisp
+(use-package which-key
+  :ensure t
+  :config (which-key-mode))
+#+END_SRC
+
+** rainbow: highlight css hex colours
+#+BEGIN_SRC emacs-lisp
+(use-package rainbow-mode
+  :ensure t
+  :config (rainbow-mode 1))
+#+END_SRC
+
+** rainbow-delimiters: highlight matching delimiters
+#+BEGIN_SRC emacs-lisp
+(use-package rainbow-delimiters
+  :ensure t
+  :config
+  (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
+#+END_SRC
+
+** sudo-edit: edit files as root
+#+BEGIN_SRC emacs-lisp
+(use-package sudo-edit
+  :ensure t
+  :bind ("s-e". sudo-edit))
+#+END_SRC
+
+** symon: basic system monitor
+#+BEGIN_SRC emacs-lisp
+(use-package symon
+  :ensure t
+  :bind ("s-h" . symon-mode))
+#+END_SRC
+
+* config utils
+#+BEGIN_SRC emacs-lisp
+(defun config-visit ()
+  "Visit config.org"
+  (interactive)
+  (find-file "~/.emacs.d/config.org"))
+
+(defun config-reload ()
+  "Reload config.org"
+  (interactive)
+  (org-babel-load-file (expand-file-name
+                        "~/.emacs.d/config.org")))
+
+(global-set-key (kbd "C-c v") #'config-visit)
+(global-set-key (kbd "C-c r") #'config-reload)
+#+END_SRC
+
+* general coding style and syntax
+** utility functions
+since I need to dynamically set common style settings, here are some reusable
+functions
+
+#+BEGIN_SRC emacs-lisp
+(defun style-tabs ()
+  "Allow tabs for indentation"
+  (interactive)
+  (setq indent-tabs-mode t)
+  (setq whitespace-style (delete 'tabs whitespace-style)))
+
+(defun style-spaces ()
+  "Use only spaces for indentation and alignment"
+  (interactive)
+  (setq indent-tabs-mode nil)
+  (add-to-list 'whitespace-style 'tabs))
+#+END_SRC
+
+** default coding style
+#+BEGIN_SRC emacs-lisp
+(setq whitespace-style '(face empty trailing))
+(style-spaces)
+(global-whitespace-mode t)
+(set-default 'truncate-lines t)
+#+END_SRC
+
+** force modes for special file extensions
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'auto-mode-alist '("APKBUILD" . pkgbuild-mode))
+(add-to-list 'auto-mode-alist '("shit" . sh-mode))
+#+END_SRC
+
+** automatically close bracket pairs
+#+BEGIN_SRC emacs-lisp
+(setq electric-pair-pairs
+      '((?\( . ?\))
+        (?\[ . ?\])))
+
+(electric-pair-mode t)
+#+END_SRC
+
+** keybind to clean up whitespace
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c SPC") #'whitespace-cleanup)
+#+END_SRC
+
+* C
+** linux style, 4-space indents
+#+BEGIN_SRC emacs-lisp
+(setq c-default-style "linux")
+(setq c-basic-offset 4)
+#+END_SRC
+
+** fix disgusting parameter alignment
+#+BEGIN_SRC emacs-lisp
+(defun c-style-setup ()
+  "Personal settings for c-mode"
+  (c-set-offset 'arglist-cont-nonempty '+))
+
+(add-hook 'c-mode-hook #'c-style-setup)
+#+END_SRC
+
+* Go
+#+BEGIN_SRC emacs-lisp
+(add-hook 'go-mode-hook #'style-tabs)
+(add-hook 'before-save-hook #'gofmt-before-save)
+#+END_SRC
+
+* pkgbuild
+#+BEGIN_SRC emacs-lisp
+(use-package pkgbuild-mode
+  :ensure t
+  :quelpa
+  (pkgbuild-mode
+   :fetcher github
+   :repo "juergenhoetzel/pkgbuild-mode"))
+
+(add-hook 'pkgbuild-mode-hook #'style-tabs)
+#+END_SRC
+
+* ebuild
+#+BEGIN_SRC emacs-lisp
+(add-hook 'ebuild-mode-hook #'style-tabs)
+#+END_SRC
+
+* terminals
+** default shell for ansi-term
+#+BEGIN_SRC emacs-lisp
+(defvar default-shell "/bin/bash")
+(defadvice ansi-term (before force-bash)
+  (interactive (list default-shell)))
+(ad-activate 'ansi-term)
+#+END_SRC
+
+** hotkey to spawn st
+I'd love to use ansi-term, but it's too slow. I mostly use the terminal
+to run emerge or compile stuff and the amount of output it generates makes
+emacs cap out on cpu usage
+
+#+BEGIN_SRC emacs-lisp
+(defun launch-st ()
+  "Starts st, the terminal emulator, using `exwm-launcher'"
+  (interactive)
+  (exwm-launcher "st"))
+
+(global-set-key (kbd "<s-return>") #'launch-st)
+#+END_SRC
+
+* ido
+** basic settings
+#+BEGIN_SRC emacs-lisp
+(setq ido-enable-flex-matching nil)
+(setq ido-create-new-buffer 'always)
+(setq ido-everywhere t)
+(ido-mode 1)
+(global-set-key (kbd "C-x C-b") #'ido-switch-buffer)
+#+END_SRC
+
+** ido-vertical: better ido buffer
+#+BEGIN_SRC emacs-lisp
+(use-package ido-vertical-mode
+  :ensure t
+  :config (ido-vertical-mode 1))
+#+END_SRC
+
+** move around ido-vertical with C-n and C-p
+#+BEGIN_SRC emacs-lisp
+(setq ido-vertical-define-keys 'C-n-and-C-p-only)
+#+END_SRC
+
+** smex: ido-like completion list for M-x
+#+BEGIN_SRC emacs-lisp
+(use-package smex
+  :ensure t
+  :config (smex-initialize)
+  :bind ("M-x" . smex))
+#+END_SRC
+
+* navigation
+** bind ibuffer
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-x b") #'ibuffer)
+#+END_SRC
+
+** ibuffer expert mode
+this prevents the confirmation message when killing buffers from
+the list
+#+BEGIN_SRC emacs-lisp
+(setq ibuffer-expert t)
+#+END_SRC
+
+** avy: qutebrowser-style labels to jump through the code
+#+BEGIN_SRC emacs-lisp
+(use-package avy
+  :ensure t
+  :bind ("M-s" . avy-goto-char))
+#+END_SRC
+
+** switch-window: switch with labels for 3+ windows
+#+BEGIN_SRC emacs-lisp
+(use-package switch-window
+  :ensure t
+  :config
+  (setq switch-window-input-style 'minibuffer)
+  (setq switch-window-increase 4)
+  (setq switch-window-threshold 2)
+  (setq switch-window-shortcut-style 'qwerty)
+  (setq switch-window-qwerty-shortcuts
+        '("a" "s" "d" "f" "j" "k" "l"))
+  :bind
+  ([remap other-window] . switch-window))
+#+END_SRC
+
+** automatically focus newly split window
+#+BEGIN_SRC emacs-lisp
+(defun split-window-horizontally-select ()
+  "Splits window horizontally and selects the new window"
+  (interactive)
+  (split-window-below)
+  (balance-windows)
+  (other-window 1))
+
+(defun split-window-vertically-select ()
+  "Splits window vertically and selects the new window"
+  (interactive)
+  (split-window-right)
+  (balance-windows)
+  (other-window 1))
+
+(global-set-key (kbd "C-x 2") #'split-window-horizontally-select)
+(global-set-key (kbd "C-x 3") #'split-window-vertically-select)
+#+END_SRC
+
+** always kill current buffer
+#+BEGIN_SRC emacs-lisp
+(defun kill-current-buffer ()
+  "Kills the currently selected buffer"
+  (interactive)
+  (kill-buffer (current-buffer)))
+
+(global-set-key (kbd "C-x k") #'kill-current-buffer)
+#+END_SRC
+
+** popup-kill-ring
+#+BEGIN_SRC emacs-lisp
+(use-package popup-kill-ring
+  :ensure t
+  :bind ("M-y" . popup-kill-ring))
+#+END_SRC
+
+** swiper: minibuffer with search results
+#+BEGIN_SRC emacs-lisp
+(use-package swiper
+  :ensure t
+  :bind ("C-s" . swiper))
+#+END_SRC
+
+** distinguish between sub-words in camelCase and underscore_case
+#+BEGIN_SRC emacs-lisp
+  (global-subword-mode 1)
+#+END_SRC
+
+* editing
+** kill entire word (vim's diw)
+#+BEGIN_SRC emacs-lisp
+(defun kill-inside-word ()
+  "Kills the entire current word"
+  (interactive)
+  (backward-word)
+  (kill-word 1))
+
+(global-set-key (kbd "C-c w") #'kill-inside-word)
+#+END_SRC
+
+** copy line (vim's yy)
+save-excursion ensures that the cursor stays where it is by pushing
+the cursor state and popping it at the end of the block
+
+#+BEGIN_SRC emacs-lisp
+(defun copy-inside-line ()
+  "Copy the entire current line"
+  (interactive)
+  (save-excursion
+    (kill-new
+     (buffer-substring
+      (point-at-bol)
+      (point-at-eol)))))
+
+(global-set-key (kbd "C-c y") #'copy-inside-line)
+#+END_SRC
+
+** paste line (vim's pp)
+#+BEGIN_SRC emacs-lisp
+(defun yank-inside-line ()
+  "Push next line down and yank"
+  (interactive)
+  (move-end-of-line nil)
+  (newline)
+  (yank))
+
+(global-set-key (kbd "C-c p") #'yank-inside-line)
+
+(defun yank-menu-inside-line ()
+  "Push next line down and open the yank menu"
+  (interactive)
+  (move-end-of-line nil)
+  (newline)
+  (popup-kill-ring))
+
+(global-set-key (kbd "C-c M-p") #'yank-menu-inside-line)
+#+END_SRC
+
+** kill until character (vim's dt*)
+#+BEGIN_SRC emacs-lisp
+(use-package zzz-to-char
+  :ensure t
+  :bind ("M-z" . zzz-up-to-char))
+#+END_SRC
+
+* auto completion
+autocomplete is set to be case insensitive and as aggressive as
+possible (pops up after 3 characters).
+
+I never actually needed auto completion for the languages I mainly
+write and it can even get in the way, but the eldoc-style documentation is
+better than pulling up a window with the docs for every time and some things
+like tabbing through function parameters in C irony mode are neat
+
+I don't recommend keeping this on if you don't have a top of the line cpu as
+it will hog an incredible amount of resources even with conservative settings
+and cause perceivable lag spikes
+
+#+BEGIN_SRC emacs-lisp
+(use-package company
+  :ensure t
+  :init (add-hook 'after-init-hook #'global-company-mode)
+  :config
+  (setq company-dabbrev-downcase 0)
+  (setq company-idle-delay 0)
+  (setq company-minimum-prefix-length 3))
+
+(defun turn-off-company-mode ()
+  "Disables company mode"
+  (company-mode -1))
+
+(add-hook 'org-mode-hook #'turn-off-company-mode)
+#+END_SRC
+
+** C/C++
+#+BEGIN_SRC emacs-lisp
+(use-package irony
+  :ensure t
+  :config
+  (add-hook 'c++-mode-hook #'irony-mode)
+  (add-hook 'c-mode-hook #'irony-mode))
+
+(use-package irony-eldoc
+  :ensure t
+  :config
+  (add-hook 'irony-mode-hook #'irony-eldoc))
+
+;; flycheck is pretty much useless for me, but i'll leave it
+;; commented just in case i ever need it
+;;(use-package flycheck-irony
+;;  :ensure t
+;;  :config
+;;  (add-hook 'c++-mode-hook #'flycheck-mode)
+;;  (add-hook 'c-mode-hook #'flycheck-mode)
+;;  (add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+
+(use-package company-irony
+  :ensure t
+  :config
+  (add-hook 'irony-mode-hook #'irony-cdb-autosetup-compile-options)
+  (add-to-list 'company-backends #'company-irony)
+  (add-hook 'irony-mode-hook #'company-irony-setup-begin-commands))
+#+END_SRC
+
+** python
+#+BEGIN_SRC emacs-lisp
+(use-package company-jedi
+  :ensure t
+  :init (add-to-list 'company-backends 'company-jedi))
+#+END_SRC
+
+** emacs-lisp
+display parameters in the echo area as function calls are typed
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'emacs-lisp-mode-hook #'eldoc-mode)
+#+END_SRC
+
+** go
+#+BEGIN_SRC emacs-lisp
+(use-package company-go :ensure t)
+#+END_SRC
+
+* modeline
+** spaceline: better formatted, decorated modeline
+#+BEGIN_SRC emacs-lisp
+(use-package spaceline
+  :ensure t
+  :config
+  (require 'spaceline-config)
+  (setq powerline-default-separator (quote arrow))
+  (spaceline-spacemacs-theme))
+#+END_SRC
+
+** diminish: hide minor modes
+#+BEGIN_SRC emacs-lisp
+(use-package diminish
+  :ensure t
+  :config
+  (diminish 'subword-mode)
+  (diminish 'which-key-mode)
+  (diminish 'global-whitespace-mode)
+  (diminish 'rainbow-mode)
+  (diminish 'eldoc-mode)
+  (diminish 'sharenix-mode)
+  (diminish 'abbrev-mode)
+  (diminish 'linum-mode))
+#+END_SRC
+
+** show date and time
+#+BEGIN_SRC emacs-lisp
+(setq display-time-format "%F %H:%M")
+(display-time-mode 1)
+#+END_SRC
+
+** show column and line
+#+BEGIN_SRC emacs-lisp
+(line-number-mode 1)
+(column-number-mode 1)
+#+END_SRC
+
+* restore normal garbage collection
+#+BEGIN_SRC emacs-lisp
+(normal-gc)
+#+END_SRC
