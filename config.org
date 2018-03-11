@@ -874,17 +874,20 @@ and cause perceivable lag spikes
 #+BEGIN_SRC emacs-lisp
 (use-package company
   :ensure t
-  :init (add-hook 'after-init-hook #'global-company-mode)
   :config
   (setq company-dabbrev-downcase 0)
   (setq company-idle-delay 0)
-  (setq company-minimum-prefix-length 3))
+  (setq company-minimum-prefix-length 3)
 
-(defun turn-off-company-mode ()
-  "Disables company mode"
-  (company-mode -1))
-
-(add-hook 'org-mode-hook #'turn-off-company-mode)
+  (add-hook 'c++-mode-hook #'company-mode)
+  (add-hook 'c-mode-hook #'company-mode)
+  (add-hook 'python-mode-hook #'company-mode)
+  (add-hook 'csharp-mode-hook #'company-mode)
+  (add-hook 'js-mode-hook #'company-mode)
+  (add-hook 'sh-mode-hook #'company-mode)
+  (add-hook 'pkgbuild-mode-hook #'company-mode)
+  (add-hook 'go-mode-hook #'company-mode)
+  (add-hook 'emacs-lisp-mode-hook #'company-mode))
 #+END_SRC
 
 ** C/C++
