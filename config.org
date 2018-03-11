@@ -539,13 +539,6 @@ so I'll make it invisible altogether because it looks terrible
   :config (which-key-mode))
 #+END_SRC
 
-** rainbow: highlight css hex colours
-#+BEGIN_SRC emacs-lisp
-(use-package rainbow-mode
-  :ensure t
-  :config (rainbow-mode 1))
-#+END_SRC
-
 ** rainbow-delimiters: highlight matching delimiters
 #+BEGIN_SRC emacs-lisp
 (use-package rainbow-delimiters
