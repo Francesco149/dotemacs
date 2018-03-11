@@ -554,13 +554,6 @@ so I'll make it invisible altogether because it looks terrible
   :bind ("s-e". sudo-edit))
 #+END_SRC
 
-** symon: basic system monitor
-#+BEGIN_SRC emacs-lisp
-(use-package symon
-  :ensure t
-  :bind ("s-h" . symon-mode))
-#+END_SRC
-
 * config utils
 #+BEGIN_SRC emacs-lisp
 (defun config-visit ()
