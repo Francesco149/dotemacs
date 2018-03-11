@@ -61,7 +61,7 @@
  '(org-agenda-files nil)
  '(package-selected-packages
    (quote
-    (emacs-async xelb org-wild-notifier erc-image erc-hl-nicks nlinum flycheck-irony irony-eldoc company-irony dired+ dired-plus org-plus-contrib magit ebuild-mode pkgbuild-mode quelpa-use-package quelpa package-build company-go slime-company slime company-jedi zzz-to-char swiper siper popup-kill-ring nyan-mode symon dmenu diminish spaceline company dashboard rainbow-delimiters sudo-edit switch-window rainbow-mode rainbow which-key use-package smex purple-haze-theme org-bullets ido-vertical-mode fill-column-indicator color-theme-sanityinc-tomorrow clues-theme avy afternoon-theme))))
+    (expand-region omnisharp omnisharp-emacs emacs-async xelb org-wild-notifier erc-image erc-hl-nicks nlinum flycheck-irony irony-eldoc company-irony dired+ dired-plus org-plus-contrib magit ebuild-mode pkgbuild-mode quelpa-use-package quelpa package-build company-go slime-company slime company-jedi zzz-to-char swiper siper popup-kill-ring nyan-mode symon dmenu diminish spaceline company dashboard rainbow-delimiters sudo-edit switch-window rainbow-mode rainbow which-key use-package smex purple-haze-theme org-bullets ido-vertical-mode fill-column-indicator color-theme-sanityinc-tomorrow clues-theme avy afternoon-theme))))
 
 ;; disable bold fonts globally AFTER loading the theme and
 ;; everything else so there's no way they get overridden

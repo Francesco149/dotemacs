@@ -865,6 +865,13 @@ the cursor state and popping it at the end of the block
   :bind ("M-z" . zzz-up-to-char))
 #+END_SRC
 
+** semantically expand selection
+#+BEGIN_SRC emacs-lisp
+(use-package expand-region
+  :ensure t
+  :bind ("C-q" . er/expand-region))
+#+END_SRC
+
 * auto completion
 autocomplete is set to be case insensitive and as aggressive as
 possible (pops up after 3 characters).
