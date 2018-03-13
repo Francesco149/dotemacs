@@ -408,12 +408,25 @@ I'm quite fond of using git from the command line, but in the emacs ecosystem
 using magit is much quicker than pulling up a terminal
 
 #+BEGIN_SRC emacs-lisp
+(defun local-magit-display-buffer (buffer)
+  "Customized magit display buffer behavior"
+  (display-buffer
+   buffer
+   (if (and (derived-mode-p 'magit-mode)
+            (memq (with-current-buffer buffer major-mode)
+                  '(magit-process-mode
+                    magit-revision-mode
+                    magit-diff-mode
+                    magit-stash-mode
+                    magit-status-mode)))
+       nil
+     '(display-buffer-same-window))))
+
 (use-package magit
   :ensure t
   :bind ("M-g" . magit-status)
   :config
-  (setq magit-display-buffer-function
-        #'magit-display-buffer-same-window-except-diff-v1))
+  (setq magit-display-buffer-function #'local-magit-display-buffer))
 #+END_SRC
 
 * irc
