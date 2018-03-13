@@ -32,10 +32,10 @@
 (mapc #'package-install-ensure essentials)
 
 (if (require 'quelpa nil t)
-  (with-temp-buffer
-    (url-insert-file-contents
-     "https://raw.github.com/quelpa/quelpa/master/bootstrap.el")
-    (eval-buffer)))
+    (with-temp-buffer
+      (url-insert-file-contents
+       "https://raw.github.com/quelpa/quelpa/master/bootstrap.el")
+      (eval-buffer)))
 
 (setq org-agenda-files (quote ("~/.emacs.d/notes.org")))
 (org-babel-load-file (expand-file-name "~/.emacs.d/config.org"))
@@ -56,12 +56,9 @@
  '(custom-safe-themes
    (quote
     ("1b8d67b43ff1723960eb5e0cba512a2c7a2ad544ddb2533a90101fd1852b426e" default)))
- '(global-whitespace-mode t)
- '(line-number-mode nil)
- '(org-agenda-files nil)
  '(package-selected-packages
    (quote
-    (expand-region omnisharp omnisharp-emacs emacs-async xelb org-wild-notifier erc-image erc-hl-nicks nlinum flycheck-irony irony-eldoc company-irony dired+ dired-plus org-plus-contrib magit ebuild-mode pkgbuild-mode quelpa-use-package quelpa package-build company-go slime-company slime company-jedi zzz-to-char swiper siper popup-kill-ring nyan-mode symon dmenu diminish spaceline company dashboard rainbow-delimiters sudo-edit switch-window rainbow-mode rainbow which-key use-package smex purple-haze-theme org-bullets ido-vertical-mode fill-column-indicator color-theme-sanityinc-tomorrow clues-theme avy afternoon-theme))))
+    (yasnippet-snippets yasnippet expand-region emacs-async xelb erc-image erc-hl-nicks nlinum flycheck-irony irony-eldoc company-irony dired+ org-plus-contrib magit ebuild-mode pkgbuild-mode quelpa-use-package quelpa package-build company-go company-jedi zzz-to-char swiper popup-kill-ring dmenu diminish spaceline company dashboard rainbow-delimiters sudo-edit switch-window rainbow-mode rainbow which-key use-package smex org-bullets ido-vertical-mode color-theme-sanityinc-tomorrow avy))))
 
 ;; disable bold fonts globally AFTER loading the theme and
 ;; everything else so there's no way they get overridden
