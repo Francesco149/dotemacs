@@ -440,7 +440,12 @@ the hl-nicks module doesn't seem to work. help?
 (setq erc-nick "lolisamurai")
 (setq erc-prompt #'erc-prompt-formatter)
 (setq erc-hide-list '("JOIN" "PART" "QUIT"))
-(setq erc-server-history-list '("irc.freenode.net"))
+
+(erc :server "irc.freenode.net")
+(erc :server "irc.rizon.net")
+
+(setq erc-autojoin-channels-alist '(("uworld.se" "#templeos")
+                                    ("freenode.net" "#dreamcastdev")))
 
 (use-package erc-hl-nicks
   :ensure t
