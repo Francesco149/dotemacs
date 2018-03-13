@@ -447,6 +447,8 @@ the hl-nicks module doesn't seem to work. help?
 (setq erc-autojoin-channels-alist '(("uworld.se" "#templeos")
                                     ("freenode.net" "#dreamcastdev")))
 
+(add-hook 'erc-mode-hook #'erc-scrolltobottom-enable)
+
 (use-package erc-hl-nicks
   :ensure t
   :config (erc-update-modules))
