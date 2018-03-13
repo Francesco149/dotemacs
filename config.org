@@ -457,6 +457,7 @@ the hl-nicks module doesn't seem to work. help?
   :ensure t
   :config
   (add-to-list 'erc-modules 'image)
+  (setq erc-image-inline-rescale 512)
   (erc-update-modules))
 #+END_SRC
 
