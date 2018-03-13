@@ -996,7 +996,7 @@ display parameters in the echo area as function calls are typed
   :config
   (diminish 'subword-mode)
   (diminish 'which-key-mode)
-  (diminish 'global-whitespace-mode)
+  (diminish 'whitespace-mode)
   (diminish 'rainbow-mode)
   (diminish 'eldoc-mode)
   (diminish 'sharenix-mode)
