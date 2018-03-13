@@ -613,10 +613,15 @@ functions
 
 ** default coding style
 #+BEGIN_SRC emacs-lisp
-(setq whitespace-style '(face empty trailing))
-(style-spaces)
-(global-whitespace-mode t)
-(set-default 'truncate-lines t)
+(defun style-default ()
+  "Default coding style settings"
+  (setq whitespace-style '(face empty trailing))
+  (style-spaces)
+  (set-default 'truncate-lines t)
+  (whitespace-mode 1))
+
+(add-hook 'prog-mode-hook #'style-default)
+
 #+END_SRC
 
 ** force modes for special file extensions
